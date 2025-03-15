@@ -1,1 +1,3 @@
 itertools
+sentence-transformers
+einops

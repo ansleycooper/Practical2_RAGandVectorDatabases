@@ -2,6 +2,7 @@ import time
 import psutil
 import csv
 import os
+from embeddings import store_embedding
 
 
 
@@ -27,6 +28,10 @@ with open(csv_filename, mode='w', newline='') as file:
         
         # Placeholder for indexing process
         # TODO: Insert code to build the indexers
+
+        # build and store with all-MiniLM-L6-v2 encodings
+        # build and store with all-mpnet-base-v2 encodings
+        # build and store with nomic-ai/nomic-embed-text-v1
         
         # Record time and memory usage
         end_time = time.time()
