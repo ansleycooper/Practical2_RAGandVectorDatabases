@@ -1,3 +1,4 @@
 itertools
 sentence-transformers
 einops
+pymilvus

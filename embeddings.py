@@ -15,6 +15,7 @@ import psutil
 import time
 from datetime import datetime
 import pandas as pd
+import json
 
 
 def split_text_into_chunks(text, chunk_size=300, overlap=50):
@@ -91,17 +92,19 @@ def test_embedding(data, embedding_model):
     return embeddings
 
 def save_embeddings(data, filepath):
+
     embeddings = [{'chunk_idx':embedding_idx, 'embedding':embedding} for embedding_idx, embedding in enumerate(data)]
-    pd.DataFrame(embeddings).to_csv(filepath, index=False)
+    with open(filepath, "w") as f:
+        json.dump(embeddings, f, indent=4)
 
 if __name__ == '__main__':
     data = load_data('temp.txt')
     
     embeddings_1 = test_embedding(data, 'all-MiniLM-L6-v2')
-    save_embeddings(embeddings_1, 'embeddings/all-MiniLM-L6-v2.csv')
+    save_embeddings(embeddings_1, 'embeddings/all-MiniLM-L6-v2.json')
 
     embeddings_2 = test_embedding(data, 'all-mpnet-base-v2')
-    save_embeddings(embeddings_2, 'embeddings/all-mpnet-base-v2.csv')
+    save_embeddings(embeddings_2, 'embeddings/all-mpnet-base-v2.json')
 
     embeddings_3 = test_embedding(data, 'nomic-ai/nomic-embed-text-v1')
-    save_embeddings(embeddings_3, 'embeddings/nomic-embed-text-v1.csv')
+    save_embeddings(embeddings_3, 'embeddings/nomic-embed-text-v1.json')
