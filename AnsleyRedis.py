@@ -5,11 +5,16 @@ from redis.commands.search.field import VectorField, TextField, NumericField
 from redis.commands.search.indexDefinition import IndexDefinition, IndexType
 from redis.commands.search.query import Query
 import ollama
+from sentence_transformers import SentenceTransformer
 
 # Initialize Redis
 redis_client = redis.StrictRedis(host="localhost", port=6379, decode_responses=False)
 
-VECTOR_DIM = 768  # Ensure this matches the embeddings in your JSON files
+VECTOR_DIMS = {
+    "all-MiniLM-L6-v2": 384,
+    "all-mpnet-base-v2": 768,
+    "nomic-embed-text": 768,
+}
 DISTANCE_METRIC = "COSINE"
 
 # List your embedding files
@@ -20,6 +25,7 @@ EMBEDDING_FILES = {
 }
 
 def create_redis_index(index_name, vector_dim):
+    print(vector_dim)
     """Creates a new index for a specific embedding model."""
     try:
         redis_client.ft(index_name).info()
@@ -56,27 +62,31 @@ def store_embeddings(index_name, file_path):
         })
 
     print(f"Stored {len(embeddings)} embeddings in '{index_name}'.")
-
-# Create indexes and store embeddings
-for model_name, file_path in EMBEDDING_FILES.items():
-    create_redis_index(model_name, VECTOR_DIM)
-    store_embeddings(model_name, file_path)
     
-def get_embedding(text, model="nomic-embed-text"):
-    """Get text embedding using Ollama"""
-    response = ollama.embeddings(model=model, prompt=text)
-    return response["embedding"]
+    
+def get_embedding(text, model):
+    if model == "nomic-embed-text":
+        """Get text embedding using Ollama"""
+        response = ollama.embeddings(model=model, prompt=text)
+        return response["embedding"]
+    elif model == "all-MiniLM-L6-v2" or model == "all-mpnet-base-v2":
+        # Load the model once (do this globally to avoid reloading on every call)
+        embedding_model = SentenceTransformer(model)
+        return embedding_model.encode(text).tolist()
+    else:
+        print(f"Model '{model}' not supported.")
 
 def search_embeddings(query, index_name, top_k=3):
     """Search for similar embeddings in a given index."""
-    query_embedding = get_embedding(query)
+    query_embedding = get_embedding(query, model=index_name)
 
     query_vector = np.array(query_embedding, dtype=np.float32).tobytes()
 
     q = (
-        Query("*=>[KNN 5 @embedding $vec AS vector_distance]")
+        Query(f"*=>[KNN {top_k} @embedding $vec AS vector_distance]")
         .sort_by("vector_distance")
         .return_fields("chunk", "vector_distance")
+        .dialect(2)  # Ensure compatibility
     )
 
     try:
@@ -133,11 +143,15 @@ def interactive_search():
 
             print(f"Results from {model_name}: {context_results}")  # Debugging print
 
-            if float(context_results[0]["similarity"]) < best_similarity:
+            if float(context_results[0]["similarity"]) < float(best_similarity):
                 best_response = generate_rag_response(query, context_results)
                 best_similarity = context_results[0]["similarity"]
 
         print("\n--- Best Response ---")
         print(best_response if best_response else "No relevant information found.")
 
+# Create indexes and store embeddings
+for model_name, file_path in EMBEDDING_FILES.items():
+    create_redis_index(model_name, VECTOR_DIMS[model_name])
+    store_embeddings(model_name, file_path)
 interactive_search()

@@ -1,4 +1,10 @@
 itertools
-sentence-transformers
+sentence_transformers
 einops
 pymilvus
+psutil
+nltk
+einops
+pymilvus
+frontend
+fitz
