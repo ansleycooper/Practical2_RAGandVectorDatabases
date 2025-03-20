@@ -16,9 +16,11 @@ CHUNK_SIZES = [200, 500, 1000]
 CHUNK_OVERLAPS = [0, 50, 100]
 PREPROCESSING_STEPS = [
     "lowercase",
+    "lowercase_whitespace",
     "lowercase_whitespace_punctuation",
     "lowercase_whitespace_punctuation_noise"
 ]
+
 STOP_WORDS = set(stopwords.words('english'))
 
 # Create output directory
@@ -32,6 +34,8 @@ def load_text(file_path):
     
 def preprocess_text(text, method):
     text = text.lower()
+    if method == "lowercase_whitespace":
+        text = " ".join(text.split())  # Normalize whitespace (remove extra spaces, tabs, newlines)
     if method in ["lowercase_whitespace_punctuation", "lowercase_whitespace_punctuation_noise"]:
         text = re.sub(r'[^a-zA-Z0-9\s]', '', text)  # Remove punctuation
     if method == "lowercase_whitespace_punctuation_noise":

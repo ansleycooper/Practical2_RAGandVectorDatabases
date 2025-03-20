@@ -98,7 +98,9 @@ def save_embeddings(data, filepath):
         json.dump(embeddings, f, indent=4)
 
 if __name__ == '__main__':
-    data = load_data('temp.txt')
+    data = load_data('chunked_data/Practical 2_ Data.txt_size500_overlap100_lowercase_whitespace.txt')
+    os.makedirs('embeddings', exist_ok=True)
+
     
     embeddings_1 = test_embedding(data, 'all-MiniLM-L6-v2')
     save_embeddings(embeddings_1, 'embeddings/all-MiniLM-L6-v2.json')
