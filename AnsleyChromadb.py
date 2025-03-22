@@ -85,61 +85,7 @@ def search_embeddings_in_chroma(db, query, collection_name, top_n=3):
     return context_results
 
 
-
-def generate_rag_response(query, context_results):
-    """Generates a response using retrieved context and Ollama LLM."""
-    context_str = "\n".join(
-        [f"Chunk: {r['chunk']} (Similarity: {float(r['similarity']):.2f})" for r in context_results]
-    )
-    print(context_str)  # Debugging print
-    prompt = f"""You are a helpful AI assistant. 
-        Use the following context to answer the query accurately. If the context is not relevant, say 'I don't know'.
-    Context:
-    {context_str}
-
-    Query: {query}
-
-    Answer:"""
-
-    response = ollama.chat(model="mistral:latest", messages=[{"role": "user", "content": prompt}])
-    return response["message"]["content"]
-
-def interactive_search(db):
-    """Interactive search across all embedding models."""
-    print("🔍 Multi-Model RAG Search Interface")
-    print("Type 'exit' to quit")
-
-    while True:
-        query = input("\nEnter your query: ")
-
-        if query.lower() == "exit":
-            break
-
-        print(f"Searching for: {query}")  # Debugging print
-
-        best_response = None
-        best_similarity = float("inf")
-
-        for model_name in EMBEDDING_FILES.keys():
-            print(f"Checking index: {model_name}")  # Debugging print
-
-            context_results = search_embeddings_in_chroma(db, query, model_name)
-
-            if not context_results:
-                print(f"⚠️ No results found in index '{model_name}'.")
-                continue  # Skip if no results
-
-            print(f"Results from {model_name}: {context_results}")  # Debugging print
-
-            # Get the best response based on the highest similarity
-            if float(context_results[0]["similarity"]) < best_similarity:
-                best_response = generate_rag_response(query, context_results)
-                best_similarity = context_results[0]["similarity"]
-
-        print("\n--- Best Response ---")
-        print(best_response if best_response else "No relevant information found.")
-
-def main():
+def establish_chroma():
     db = chromadb.PersistentClient(path="chroma_db")
     clear_chroma_db()
 
@@ -156,7 +102,6 @@ def main():
             store_embeddings_in_chroma(db, embeddings, collection_name)
         else:
             print(f"File not found: {file_path}")
-    interactive_search(db)
 
 if __name__ == "__main__":
-    main()
+    establish_chroma()

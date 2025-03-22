@@ -7,8 +7,7 @@ from redis.commands.search.query import Query
 import ollama
 from sentence_transformers import SentenceTransformer
 
-# Initialize Redis
-redis_client = redis.StrictRedis(host="localhost", port=6379, decode_responses=False)
+
 
 VECTOR_DIMS = {
     "all-MiniLM-L6-v2": 384,
@@ -24,7 +23,7 @@ EMBEDDING_FILES = {
     "nomic-embed-text": "embeddings/nomic-embed-text-v1.json",
 }
 
-def create_redis_index(index_name, vector_dim):
+def create_redis_index(redis_client, index_name, vector_dim):
     print(vector_dim)
     """Creates a new index for a specific embedding model."""
     try:
@@ -49,7 +48,7 @@ def create_redis_index(index_name, vector_dim):
     )
     print(index_name)
 
-def store_embeddings(index_name, file_path):
+def store_embeddings(redis_client, index_name, file_path):
     """Stores embeddings from a JSON file into Redis."""
     with open(file_path, "r") as f:
         embeddings = json.load(f)
@@ -57,17 +56,19 @@ def store_embeddings(index_name, file_path):
     for entry in embeddings:
         redis_key = f"{index_name}:{entry['chunk_idx']}"
         redis_client.hset(redis_key, mapping={
-            "chunk": entry["chunk_idx"],
-            "embedding": np.array(entry["embedding"], dtype=np.float32).tobytes(),
+        "chunk": entry["chunk_idx"],
+        "embedding": np.array(entry["embedding"], dtype=np.float32).tobytes(),
+        "text": entry["text"]  # Store the original text metadata
         })
+
 
     print(f"Stored {len(embeddings)} embeddings in '{index_name}'.")
     
     
 def get_embedding(text, model):
-    if model == "nomic-embed-text":
+    if model == "nomic-embed-text-v1":
         """Get text embedding using Ollama"""
-        response = ollama.embeddings(model=model, prompt=text)
+        response = ollama.embeddings(model='nomic-embed-text', prompt=text)
         return response["embedding"]
     elif model == "all-MiniLM-L6-v2" or model == "all-mpnet-base-v2":
         # Load the model once (do this globally to avoid reloading on every call)
@@ -76,7 +77,7 @@ def get_embedding(text, model):
     else:
         print(f"Model '{model}' not supported.")
 
-def search_embeddings(query, index_name, top_k=3):
+def search_embeddings(redis_client, query, index_name, top_k=3):
     """Search for similar embeddings in a given index."""
     query_embedding = get_embedding(query, model=index_name)
 
@@ -96,62 +97,13 @@ def search_embeddings(query, index_name, top_k=3):
         print(f"Error searching index {index_name}: {e}")
         return []
 
-def generate_rag_response(query, context_results):
-    """Generates a response using retrieved context and Ollama LLM."""
-    context_str = "\n".join(
-        [f"Chunk: {r['chunk']} (Similarity: {float(r['similarity']):.2f})" for r in context_results]
+def main():
+     # Initialize Redis
+    redis_client = redis.StrictRedis(host="localhost", port=6379, decode_responses=False)
+    # Create indexes and store embeddings
+    for model_name, file_path in EMBEDDING_FILES.items():
+        create_redis_index(redis_client, model_name, VECTOR_DIMS[model_name])
+        store_embeddings(redis_client, model_name, file_path)
 
-    )
-
-    prompt = f"""You are a helpful AI assistant. 
-Use the following context to answer the query accurately. If the context is not relevant, say 'I don't know'.
-
-Context:
-{context_str}
-
-Query: {query}
-
-Answer:"""
-
-    response = ollama.chat(model="mistral:latest", messages=[{"role": "user", "content": prompt}])
-    return response["message"]["content"]
-
-def interactive_search():
-    """Interactive search across all embedding models."""
-    print("🔍 Multi-Model RAG Search Interface")
-    print("Type 'exit' to quit")
-
-    while True:
-        query = input("\nEnter your query: ")
-
-        if query.lower() == "exit":
-            break
-
-        print(f"Searching for: {query}")  # Debugging print
-
-        best_response = None
-        best_similarity = float("inf")
-
-        for model_name in EMBEDDING_FILES.keys():
-            print(f"Checking index: {model_name}")  # Debugging print
-
-            context_results = search_embeddings(query, model_name)
-
-            if not context_results:
-                print(f"⚠️ No results found in index '{model_name}'.")
-                continue  # Skip if no results
-
-            print(f"Results from {model_name}: {context_results}")  # Debugging print
-
-            if float(context_results[0]["similarity"]) < float(best_similarity):
-                best_response = generate_rag_response(query, context_results)
-                best_similarity = context_results[0]["similarity"]
-
-        print("\n--- Best Response ---")
-        print(best_response if best_response else "No relevant information found.")
-
-# Create indexes and store embeddings
-for model_name, file_path in EMBEDDING_FILES.items():
-    create_redis_index(model_name, VECTOR_DIMS[model_name])
-    store_embeddings(model_name, file_path)
-interactive_search()
+if __name__ == "__main__":
+    main()

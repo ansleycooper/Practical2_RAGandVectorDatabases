@@ -158,7 +158,7 @@ def interactive_search(client):
         print("\n--- Best Response ---")
         print(best_response if best_response else "No relevant information found.")
 
-def main():
+def establish_qdrant():
     # Initialize Qdrant client
     client = QdrantClient(host="localhost", port=6333)
     print("Connected to Qdrant", client)
@@ -177,7 +177,6 @@ def main():
         else:
             print(f"File not found: {file_path}")
     
-    interactive_search(client)
 
 if __name__ == "__main__":
-    main()
+    establish_qdrant()
