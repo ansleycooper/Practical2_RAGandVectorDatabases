@@ -58,13 +58,18 @@ def load_data(filepath):
 
 
 def get_embeddings(data: list, model) -> list:
-
     embedding_model = SentenceTransformer(model, trust_remote_code=True)
 
     embeddings = []
-    for text in data:
-        embeddings += [embedding_model.encode(text).tolist()]
+    for idx, text in enumerate(data):
+        embedding_vector = embedding_model.encode(text).tolist()
+        embeddings.append({"chunk_idx": idx, "text": text, "embedding": embedding_vector})
     
+    return embeddings
+
+def save_embeddings(embeddings, filepath):
+    with open(filepath, "w") as f:
+        json.dump(embeddings, f, indent=4)    
     return embeddings
 
 
@@ -91,11 +96,6 @@ def test_embedding(data, embedding_model):
 
     return embeddings
 
-def save_embeddings(data, filepath):
-
-    embeddings = [{'chunk_idx':embedding_idx, 'embedding':embedding} for embedding_idx, embedding in enumerate(data)]
-    with open(filepath, "w") as f:
-        json.dump(embeddings, f, indent=4)
 
 if __name__ == '__main__':
     data = load_data('chunked_data/Practical 2_ Data.txt_size500_overlap100_lowercase_whitespace.txt')
