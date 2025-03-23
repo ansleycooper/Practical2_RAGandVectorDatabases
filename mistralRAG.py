@@ -7,10 +7,6 @@ from sentence_transformers import SentenceTransformer
 import ollama
 import redis
 import chromadb
-from transformers import AutoModelForCausalLM, AutoTokenizer
-import torch
-from huggingface_hub import login
-
 from AnsleyChromadb import establish_chroma, search_embeddings_in_chroma
 from AnsleyRedis import create_redis_index, store_embeddings, search_embeddings
 from AnsleyQdrant import search_embeddings_in_qdrant, establish_qdrant
@@ -58,68 +54,7 @@ def get_query_embedding(text, model):
         raise ValueError(f"Unsupported model: {model}")
 
 def generate_rag_response(query, context_results):
-    model_name='mistralai/Mistral-7B-Instruct-v0.1'
-
-    model_config = transformers.AutoConfig.from_pretrained(
-        model_name,
-    )
-
-    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
-    tokenizer.pad_token = tokenizer.eos_token
-    tokenizer.padding_side = "right"
-    
-    # Activate 4-bit precision base model loading
-    use_4bit = True
-
-    # Compute dtype for 4-bit base models
-    bnb_4bit_compute_dtype = "float16"
-
-    # Quantization type (fp4 or nf4)
-    bnb_4bit_quant_type = "nf4"
-
-    # Activate nested quantization for 4-bit base models (double quantization)
-    use_nested_quant = False
-    
-    compute_dtype = getattr(torch, bnb_4bit_compute_dtype)
-
-    bnb_config = BitsAndBytesConfig(
-        load_in_4bit=use_4bit,
-        bnb_4bit_quant_type=bnb_4bit_quant_type,
-        bnb_4bit_compute_dtype=compute_dtype,
-        bnb_4bit_use_double_quant=use_nested_quant,
-    )
-
-    # Check GPU compatibility with bfloat16
-    if compute_dtype == torch.float16 and use_4bit:
-        major, _ = torch.cuda.get_device_capability()
-        if major >= 8:
-            print("=" * 80)
-            print("Your GPU supports bfloat16: accelerate training with bf16=True")
-            print("=" * 80)
-            
-    #################################################################
-    # Load pre-trained config
-    #################################################################
-    model = AutoModelForCausalLM.from_pretrained(
-        model_name,
-        quantization_config=bnb_config,
-    )
-    
-    #################################################################
-    # Load pre-trained config
-    #################################################################
-    model = AutoModelForCausalLM.from_pretrained(
-        model_name,
-        quantization_config=bnb_config,
-    )
-    
-    # Now that the model and tokenizer are loaded, you can generate the response
-    inputs = tokenizer(query, return_tensors="pt")  # Tokenize the query
-    output = model.generate(inputs['input_ids'], max_length=200)  # Generate a response
-    
-    # Decode the generated output
-    response = tokenizer.decode(output[0], skip_special_tokens=True)
-    
+    """Generate a response using retrieved context and the Ollama LLM."""
     context_str = "\n".join(
         [f"Chunk: {r['chunk']} (Similarity: {float(r['similarity']):.2f})" for r in context_results]
     )
@@ -133,13 +68,8 @@ def generate_rag_response(query, context_results):
 
     Answer:"""
 
-    # Tokenize input
-    inputs = tokenizer(prompt, return_tensors="pt").to("cpu")
-
-    # Generate response
-    outputs = model.generate(**inputs, max_length=500)
-    response = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    return response
+    response = ollama.chat(model="mistral:latest", messages=[{"role": "user", "content": prompt}])
+    return response["message"]["content"]
 
 def search_and_record():
     """Search embeddings in each vector database and record results for all queries."""
@@ -172,15 +102,13 @@ def search_and_record():
                 results.append([query_text, client_name, model_name, response, best_similarity])
 
     # Write results to CSV
-    with open("mistral_rag_results.tsv", mode="a", newline="") as file:
+    with open("ollama_rag_results.tsv", mode="a", newline="") as file:
         writer = csv.writer(file, delimiter="\t")
         writer.writerows(results)
 
-    print('\nresults recorded in mistral_rag_results.tsv')
+    print('\nresults recorded in ollama_rag_results.tsv')
 
 def main():
-    print("YOU MUST LOG INTO MISTRAL TO RUN THIS CODE")
-    print("contact cooper.ans@northeastern.edu for login information")
     for client_name, client in CLIENTS.items():
         if client_name == "redis":
             for model_name, file_path in EMBEDDING_FILES.items():
@@ -192,10 +120,10 @@ def main():
             establish_qdrant()
 
     # make CSV file and add headers i doesn't exist
-    if not os.path.exists("mistral_rag_results.tsv"):
-        with open("mistral_rag_results.tsv", mode="w", newline="") as file:
+    if not os.path.exists("ollama_rag_results.tsv"):
+        with open("ollama_rag_results.tsv", mode="w", newline="") as file:
             writer = csv.writer(file)
-            writer.writerow(["Query" "\t" "Database" "\t" "Embedding Model" "\t" "Generated Response" "\t" "Best Similarity Score"])
+            writer.writerow(["Query", "Database", "Embedding Model", "Generated Response", "Best Similarity Score"])
 
     search_and_record()
 

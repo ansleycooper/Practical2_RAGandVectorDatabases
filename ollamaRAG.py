@@ -68,7 +68,7 @@ def generate_rag_response(query, context_results):
 
     Answer:"""
 
-    response = ollama.chat(model="mistral:latest", messages=[{"role": "user", "content": prompt}])
+    response = ollama.chat(model="llama3.2:latest", messages=[{"role": "user", "content": prompt}])
     return response["message"]["content"]
 
 def search_and_record():
