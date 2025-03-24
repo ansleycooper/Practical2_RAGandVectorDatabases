@@ -33,14 +33,8 @@ CLIENTS = {
 # Predefined queries
 QUERIES_DICT = {
     1: "Do Transactions obtain locks on data when they read or write?",
-    2: "What is the difference between a list where memory is contiguously allocated and a list where linked structures are used?",
-    3: "What data types can be stored as values in Redis?",
-    4: "Create a redis database that is able to pass its keys as tokens into an Ollama RAG system.",
-    5: "Why does the CAP principle not make sense when applied to a single-node MongoDB instance?",
-    6: "Insert the following values into a binary search tree and then provide a post order traversal: 23 17 20 42 31 50.",
-    7: "When was Booker T. Washington’s birthday?",
-    8: "who am I?",
-    9: "Who was the most streamed artist on Spotify in 2015?",
+    2: "Why does the CAP principle not make sense when applied to a single-node MongoDB instance?",
+    3: "Who was the most streamed artist on Spotify in 2015?",
 }
 
 def get_query_embedding(text, model):
@@ -71,7 +65,7 @@ def generate_rag_response(query, context_results):
     response = ollama.chat(model="mistral:latest", messages=[{"role": "user", "content": prompt}])
     return response["message"]["content"]
 
-def search_and_record():
+def search_and_record(saved_destination = 'default'):
     """Search embeddings in each vector database and record results for all queries."""
     results = []
 
@@ -100,15 +94,15 @@ def search_and_record():
 
                 # Append results
                 results.append([query_text, client_name, model_name, response, best_similarity])
-
+    filepath = "results/" + saved_destination + "/mistral_rag_results.tsv"
     # Write results to CSV
-    with open("ollama_rag_results.tsv", mode="a", newline="") as file:
+    with open(filepath, mode="a", newline="") as file:
         writer = csv.writer(file, delimiter="\t")
         writer.writerows(results)
 
-    print('\nresults recorded in ollama_rag_results.tsv')
+    print('\nresults recorded in mistral_rag_results.tsv')
 
-def main():
+def run_mistralRAG(saved_destination):
     for client_name, client in CLIENTS.items():
         if client_name == "redis":
             for model_name, file_path in EMBEDDING_FILES.items():
@@ -120,12 +114,14 @@ def main():
             establish_qdrant()
 
     # make CSV file and add headers i doesn't exist
-    if not os.path.exists("ollama_rag_results.tsv"):
-        with open("ollama_rag_results.tsv", mode="w", newline="") as file:
+    filepath = "results/" + saved_destination + "/mistral_rag_results.tsv"
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)   
+    if not os.path.exists(filepath):
+        with open(filepath, mode="w", newline="") as file:
             writer = csv.writer(file)
             writer.writerow(["Query", "Database", "Embedding Model", "Generated Response", "Best Similarity Score"])
 
-    search_and_record()
+    search_and_record(saved_destination)
 
 if __name__ == "__main__":
-    main()
+    run_mistralRAG()

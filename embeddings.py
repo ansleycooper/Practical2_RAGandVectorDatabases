@@ -96,9 +96,8 @@ def test_embedding(data, embedding_model):
 
     return embeddings
 
-
-if __name__ == '__main__':
-    data = load_data('chunked_data/Practical 2_ Data.txt_size500_overlap100_lowercase_whitespace.txt')
+def make_embeddings(filepath):
+    data = load_data(filepath)
     os.makedirs('embeddings', exist_ok=True)
 
     
@@ -110,3 +109,6 @@ if __name__ == '__main__':
 
     embeddings_3 = test_embedding(data, 'nomic-ai/nomic-embed-text-v1')
     save_embeddings(embeddings_3, 'embeddings/nomic-embed-text-v1.json')
+    
+if __name__ == '__main__':
+    make_embeddings(filepath='chunked_data/Practical 2_ Data.txt_size200_overlap0_lowercase_whitespace_punctuation_noise.txt')
