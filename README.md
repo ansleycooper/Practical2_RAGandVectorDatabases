@@ -14,11 +14,17 @@ This project was developed in Spring 2025 for DS4300 at Northeastern University.
 
 ### Step 1: Set up your environment
 We recommend setting up a new environment to run this repository in order to minimize any issues that may arise during to package versions or dependancies. Below are a few resources that may help in the creation of your virtual environment. 
+
+Ensure that the environment is set up with Python version 3.10. For example, use `conda create -n [envName] python=3.10`.
+
 - https://docs.python.org/3/library/venv.html
 - https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html
 
 ### Step 2: Install requirements
-Navigate to the `requirements.txt` file using terminal. Run it through terminal using the follwing command: `pip install -r requirements.txt`. Alternatively, you can manually install each of the packages using `pip install [package name]`.
+Clone the Github repository and navigate to it using terminal. Run it through terminal using the following command: `pip install -r requirements.txt`. Alternatively, you can manually install each of the packages using `pip install [package name]`.
 
-### Step 3: 
-Navigate to the 
+### Step 3: Run code
+Navigate to practical02_driver.py and run.
+
+### Step 4: View results
+Results will appear in the `results` folder, within the subfolder for each combination of our experimental design.
