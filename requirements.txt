@@ -1,7 +1,7 @@
-torch==2.0.1
-transformers==4.30.0
+torch
+transformers
 vllm==0.8.1
-protobuf>=5.0,<6.0
+protobuf
 grpcio==1.67.1
 filelock>=3.16.1
 uvloop==0.17.0
