@@ -20,11 +20,14 @@ Ensure that the environment is set up with Python version 3.10. For example, use
 - https://docs.python.org/3/library/venv.html
 - https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html
 
-### Step 2: Install requirements
+### Step 2: Run Docker containers
+Using the Docker Desktop app, run containers for vector databases.
+
+### Step 3: Install requirements
 Clone the Github repository and navigate to it using terminal. Run it through terminal using the following command: `pip install -r requirements.txt`. Alternatively, you can manually install each of the packages using `pip install [package name]`.
 
-### Step 3: Run code
+### Step 4: Run code
 Navigate to practical02_driver.py and run.
 
-### Step 4: View results
+### Step 5: View results
 Results will appear in the `results` folder, within the subfolder for each combination of our experimental design elements.
